@@ -113,3 +113,66 @@ if err != nil {
 	log.${1:Fatal}(err)
 }
 endsnippet
+
+
+# redis
+snippet cc "redisGetSetV3" b
+	${0:${VISUAL}}libsrdb "klook.libs/db/redisdb"
+	var (
+		response = ${1:responseType}
+		cacheKey = fmt.Sprintf("%s:${4:cacheKey}", redisdb${5:.CacheTagName}, ${6:cacheKeyParams})
+		err error
+	)
+
+	f := func(timeout bool) error {
+		if timeout {
+			return nil
+		}
+		// get from cache
+		if err = redisdb.Get(cacheKey, &response); err == nil {
+			return nil
+		}
+
+		// query from http
+		if response, err = ${2:funbyDB}(ctx, ${3:params}); err != nil {
+			return err
+		}
+
+		// save to cache
+		if err = redisdb.Set(cacheKey, response, redisdb${7:.DefaultExpiresTime}); err != nil {
+			logger.Errorf("%s key:%s err:%s", utils.RequestIDFromContext(ctx), cacheKey, err)
+		}
+
+		return nil
+	}
+
+	// 加锁更新redis缓存，避免缓存失效对mysql造成冲击
+	// 	libsrdb "klook.libs/db/redisdb"
+	return response, libsrdb.NewRedislock(redisdb.CacheDB, redisdb.LockExpireTime, redisdb.LockTries, redisdb.LockDelayTime).GetSetV3(cacheKey, f)
+}
+endsnippet
+
+# Fmt Sprintf
+snippet fsf "fmt.Sprintf(...)"
+fmt.Sprintf("${1:${VISUAL}}: %+v\n", $1)
+endsnippet
+
+# Fmt Println debug
+snippet fsn "fmt.Sprintln(...)"
+fmt.Sprintln("${1:${VISUAL}}")
+endsnippet
+
+snippet funck "Function ctx" b
+func ${1:name}(ctx context.Context, h *comm.HandlerInfo, ${4:params} ${5:paramsType}) (${2:returnType}, error) {
+	sp, ctx := opentracing.StartSpanFromContext(ctx, "$1")
+	defer sp.Finish()
+
+	var (
+		${3:ret} $2
+		err error
+	)
+
+	${0:${VISUAL}}
+	return $3, nil
+}
+endsnippet
