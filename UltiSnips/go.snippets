@@ -71,14 +71,49 @@ func (${1:receiver} ${2:type}) ${3:name}(${4:params})${5/(.+)/ /}${5:type} {
 endsnippet
 
 snippet func "Function" b
+// ${4:commit}
 func ${1:name}(${2:params})${3/(.+)/ /}${3:type} {
 	${0:${VISUAL}}
 }
 endsnippet
 
 snippet funch "HTTP handler" b
-func ${1:handler}(${2:w} http.ResponseWriter, ${3:r} *http.Request) {
+// ${11:commit}
+func ${1:HandleName}(w http.ResponseWriter, r *http.Request) {
+	sp := rest.GetRequestTraceSpan("$1", r)
+	defer sp.Finish()
+	ctx := opentracing.ContextWithSpan(r.Context(), sp)
+	r = r.WithContext(ctx)
+	handler := rest.GetCtxParams(r)
+	vars    := mux.Vars(r)
 	${0:${VISUAL}}
+	// path
+	${2:cityId}, err := strconv.ParseInt(vars["${3:city_id}"], 10, 64)
+	if err != nil {
+		logger.Warn(handler.RequestID, "参数 $3 有误, err=", err.Error())
+		rest.ToFailedJSON(w, handler, common.ERR0006, common.GetInvalidParmErr(handler))
+		return
+	}
+
+	// query
+	${4:queryStr} := r.FormValue("${5:queryStr}")
+	${6:queryInt}, err := strconv.ParseInt(r.FormValue("${7:queryInt}"), 10, 64)
+	if err != nil {
+		logger.Warn(handler.RequestID, "参数 $6 有误, err=", err.Error())
+		rest.ToFailedJSON(w, handler, common.ERR0006, common.GetInvalidParmErr(handler))
+		return
+	}
+
+	// header
+	// language := h.Lang
+
+	if resp, err := ${8:Name}(ctx, handler, ${9:params}); err != nil {
+		logger.Warn(handler.RequestID, "${10:msg} 出错, err=", err.Error())
+		rest.ToFailedJSON(w, handler, comm.ERR0001, "Failed to $10")
+		return
+	} else {
+		rest.ToJSON(w, handler, resp)
+	}
 }
 endsnippet
 
@@ -149,7 +184,6 @@ snippet cc "redisGetSetV3" b
 	// 加锁更新redis缓存，避免缓存失效对mysql造成冲击
 	// 	libsrdb "klook.libs/db/redisdb"
 	return response, libsrdb.NewRedislock(redisdb.CacheDB, redisdb.LockExpireTime, redisdb.LockTries, redisdb.LockDelayTime).GetSetV3(cacheKey, f)
-}
 endsnippet
 
 # Fmt Sprintf
@@ -163,6 +197,7 @@ fmt.Sprintln("${1:${VISUAL}}")
 endsnippet
 
 snippet funck "Function ctx" b
+// ${6:commit}
 func ${1:name}(ctx context.Context, h *comm.HandlerInfo, ${4:params} ${5:paramsType}) (${2:returnType}, error) {
 	sp, ctx := opentracing.StartSpanFromContext(ctx, "$1")
 	defer sp.Finish()
