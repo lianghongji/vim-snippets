@@ -84,14 +84,14 @@ func ${1:HandleName}(w http.ResponseWriter, r *http.Request) {
 	defer sp.Finish()
 	ctx := opentracing.ContextWithSpan(r.Context(), sp)
 	r = r.WithContext(ctx)
-	handler := rest.GetCtxParams(r)
+	h := rest.GetCtxParams(r)
 	vars    := mux.Vars(r)
 	${0:${VISUAL}}
 	// path
 	${2:cityId}, err := strconv.ParseInt(vars["${3:city_id}"], 10, 64)
 	if err != nil {
-		logger.Warn(handler.RequestID, "参数 $3 有误, err=", err.Error())
-		rest.ToFailedJSON(w, handler, common.ERR0006, common.GetInvalidParmErr(handler))
+		logger.Warn(h.RequestID, "参数 $3 有误, err=", err.Error())
+		rest.ToFailedJSON(w, h, common.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
 
@@ -99,20 +99,20 @@ func ${1:HandleName}(w http.ResponseWriter, r *http.Request) {
 	${4:queryStr} := r.FormValue("${5:queryStr}")
 	${6:queryInt}, err := strconv.ParseInt(r.FormValue("${7:queryInt}"), 10, 64)
 	if err != nil {
-		logger.Warn(handler.RequestID, "参数 $6 有误, err=", err.Error())
-		rest.ToFailedJSON(w, handler, common.ERR0006, common.GetInvalidParmErr(handler))
+		logger.Warn(h.RequestID, "参数 $6 有误, err=", err.Error())
+		rest.ToFailedJSON(w, h, common.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
 
 	// header
 	// language := h.Lang
 
-	if resp, err := ${8:Name}(ctx, handler, ${9:params}); err != nil {
-		logger.Warn(handler.RequestID, "${10:msg} 出错, err=", err.Error())
-		rest.ToFailedJSON(w, handler, comm.ERR0001, "Failed to $10")
+	if resp, err := ${8:Name}(ctx, h, ${9:params}); err != nil {
+		logger.Warn(h.RequestID, "${10:msg} 出错, err=", err.Error())
+		rest.ToFailedJSON(w, h, comm.ERR0001, "Failed to $10")
 		return
 	} else {
-		rest.ToJSON(w, handler, resp)
+		rest.ToJSON(w, h, resp)
 	}
 }
 endsnippet
@@ -208,6 +208,45 @@ func ${1:name}(ctx context.Context, h *comm.HandlerInfo, ${4:params} ${5:paramsT
 	)
 
 	${0:${VISUAL}}
-	return $3, nil
+	return $3, err
 }
 endsnippet
+
+# RealLang
+snippet lang "language"
+language ${1::}= prolocale.RealLang(${2:h.Lang})
+${VISUAL}
+endsnippet
+
+# sqlx
+snippet tx "sqlx.Tx"
+tx, err := ${1:projectkdb.ProKDB}.Beginx()
+if err != nil {
+	return ${2:err}
+}
+defer tx.Rollback()
+${VISUAL}
+if err := ${3:smsdb.InsertUserFraud}(${4:ctx}, ${5:tx}, ${6:userFraud}); err != nil {
+	return $2
+}
+return ${7:tx.Commit()}
+endsnippet
+
+# tracing
+snippet spt "opentracing"
+sp, ctx := opentracing.StartSpanFromContext(ctx, "${1:QueryEmailAndIP}")
+defer sp.Finish()
+${VISUAL}
+endsnippet
+
+# post body
+snippet post "postunmasrshal"
+req := ${1:smsConfirmRequest}{}
+if err := utils.ParseBodyAndUnmarshal(r, &${2:req}); err != nil {
+	logger.Error(${3:h}.RequestID, " 解析出错, err:", err.Error())
+	rest.ToFailedJSON(w, $3, comm.ERR0006, ${5:fmt.Sprintf("[%s] %s", $3.RequestID, "${4:parameters err}")})
+	return
+}
+${VISUAL}
+endsnippet
+
