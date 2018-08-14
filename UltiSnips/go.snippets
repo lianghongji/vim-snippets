@@ -164,18 +164,16 @@ snippet cc "redisGetSetV3" b
 			return nil
 		}
 		// get from cache
-		if err = redisdb.Get(cacheKey, &response); err == nil {
-			return nil
-		}
+		if err = redisdb.Get(cacheKey, &response); err != nil {
+			// query from http
+			if response, err = ${2:funbyDB}(ctx, ${3:params}); err != nil {
+				return err
+			}
 
-		// query from http
-		if response, err = ${2:funbyDB}(ctx, ${3:params}); err != nil {
-			return err
-		}
-
-		// save to cache
-		if err = redisdb.Set(cacheKey, response, redisdb${7:.DefaultExpiresTime}); err != nil {
-			logger.Errorf("%s key:%s err:%s", utils.RequestIDFromContext(ctx), cacheKey, err)
+			// save to cache
+			if err = redisdb.Set(cacheKey, response, redisdb${7:.DefaultExpiresTime}); err != nil {
+				logger.Errorf("%s key:%s err:%s", utils.RequestIDFromContext(ctx), cacheKey, err)
+			}
 		}
 
 		return nil
@@ -246,6 +244,37 @@ if err := utils.ParseBodyAndUnmarshal(r, &${2:req}); err != nil {
 	logger.Error(${3:h}.RequestID, " 解析出错, err:", err.Error())
 	rest.ToFailedJSON(w, $3, comm.ERR0006, ${5:fmt.Sprintf("[%s] %s", $3.RequestID, "${4:parameters err}")})
 	return
+}
+${VISUAL}
+endsnippet
+
+# append
+snippet app "append"
+${1:list} = append($1, ${2:item})
+${VISUAL}
+endsnippet
+
+# timeAdd
+snippet timeadd "time.Add"
+// 一天后
+${1:startTime} := time.Now()${2:.UTC().}AddDate(0, 0, ${5:1}).Format(${3:utils.TsFormat1})
+${4:endTime} := time.Now().UTC().Format($3)
+${VISUAL}
+// 北京时间 12小时前
+$1 := time.Now()$2Add(${6:8} * time.Hour).Add(${7:-12} * time.Hour).Format($3)
+// 北京时间, utc 8小时后
+$4 := time.Now()$2Add($6 * time.Hour).Format($3)
+endsnippet
+
+snippet sqlx "sqlx.In"
+querySql, args, err := sqlx.In(querySql, ${1:lang, actIDs})
+if err != nil {
+	return nil, err
+}
+var ${2:data} = make([]*${3:Category}, 0)
+// productdb.ReadDB, projectkdb.LibsMyDB.GetSqlxDB()
+if err := ${4:productdb.ReadDB}.SelectContext(ctx, &${2}, querySql, args...); err != nil {
+	return nil, err
 }
 ${VISUAL}
 endsnippet

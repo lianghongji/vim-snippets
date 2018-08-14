@@ -12,8 +12,14 @@ $0
 endsnippet
 
 snippet ifmain "ifmain" b
+def main(args):
+	${4:${VISUAL:pass}}
+
 if __name__ == `!p snip.rv = get_quoting_style(snip)`__main__`!p snip.rv = get_quoting_style(snip)`:
-	${1:${VISUAL:main()}}
+	if len(sys.argv) < ${1:1}:
+		sys.exit(0)
+	${2:cmd} = sys.argv[1]
+	${3:main(sys.argv[1:])}
 endsnippet
 
 snippet with "with" b
@@ -26,6 +32,7 @@ snippet for "for loop" b
 for ${1:item} in ${2:iterable}:
 	${3:${VISUAL:pass}}
 endsnippet
+
 
 ##########
 # COMMON #
