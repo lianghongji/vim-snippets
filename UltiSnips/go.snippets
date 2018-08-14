@@ -267,13 +267,13 @@ $4 := time.Now()$2Add($6 * time.Hour).Format($3)
 endsnippet
 
 snippet sqlx "sqlx.In"
-querySql, args, err := sqlx.In(querySql, ${1:lang, actIDs})
+querySql, args, err := sqlx.In(${5:query}, ${1:lang, actIDs})
 if err != nil {
 	return nil, err
 }
 var ${2:data} = make([]*${3:Category}, 0)
 // productdb.ReadDB, projectkdb.LibsMyDB.GetSqlxDB()
-if err := ${4:productdb.ReadDB}.SelectContext(ctx, &${2}, querySql, args...); err != nil {
+if err := ${4:productdb.ReadDB}.SelectContext(ctx, &$2, querySql, args...); err != nil {
 	return nil, err
 }
 ${VISUAL}
