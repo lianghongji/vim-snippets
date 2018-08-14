@@ -238,7 +238,7 @@ ${VISUAL}
 endsnippet
 
 # post body
-snippet post "postunmasrshal"
+snippet postbody "postunmasrshal"
 req := ${1:smsConfirmRequest}{}
 if err := utils.ParseBodyAndUnmarshal(r, &${2:req}); err != nil {
 	logger.Error(${3:h}.RequestID, " 解析出错, err:", err.Error())
@@ -279,3 +279,25 @@ if err := ${4:productdb.ReadDB}.SelectContext(ctx, &${2}, querySql, args...); er
 ${VISUAL}
 endsnippet
 
+snippet geturl ""
+var ${1:data} = ${2:make([]*CityNews, 0)}
+queryURL := fmt.Sprintf("%s${3/v1/prodbasesrv/city/%d/basic_info}", ${4:conf.Conf.ProdBaseHost} ${5:, cityId})
+// 基础服务 prorest, 三端共用服 apprest
+if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, $1); err != nil {
+	logger.Errorf("%s [${7:GetCityTravelTipsByDB}] ${8:get basic_info} err:%s", h.RequestID, ${9: }err.Error())
+	return ${10:nil, err}
+}
+${VISUAL}
+endsnippet
+
+snippet posturl ""
+${1:var req nearbyRequest}
+var ${2:resp} ${3:prodbaseQueryResponse}
+queryURL := fmt.Sprintf("%s${4:/v1/prodbasesrv/fnb/nearby}", ${4:conf.Conf.ProdBaseHost} ${6:, params})
+// 基础服务 prorest, 三端共用服 apprest
+if err := ${7:apprest}.PostAndParseResult(ctx, h, queryURL, $8, &$2); err != nil {
+	logger.Errorf("%s [${9:GetCityTravelTipsByDB}] ${10:get basic_info} err:%s", h.RequestID, ${11: }err.Error())
+	return ${12:nil, err}
+}
+${VISUAL}
+endsnippet
