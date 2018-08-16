@@ -79,8 +79,8 @@ endsnippet
 
 snippet funch "HTTP handler" b
 // ${11:commit}
-func ${1:HandleName}(w http.ResponseWriter, r *http.Request) {
-	sp := rest.GetRequestTraceSpan("$1", r)
+func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
+	sp := rest.GetRequestTraceSpan("Handle$1", r)
 	defer sp.Finish()
 	ctx := opentracing.ContextWithSpan(r.Context(), sp)
 	r = r.WithContext(ctx)
