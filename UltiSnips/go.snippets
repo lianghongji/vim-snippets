@@ -78,7 +78,7 @@ func ${1:name}(${2:params})${3/(.+)/ /}${3:type} {
 endsnippet
 
 snippet funch "HTTP handler" b
-// ${11:commit}
+// ${8:commit}
 func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	sp := rest.GetRequestTraceSpan("Handle$1", r)
 	defer sp.Finish()
@@ -91,29 +91,42 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	${2:cityId}, err := strconv.ParseInt(vars["${3:city_id}"], 10, 64)
 	if err != nil {
 		logger.Warn(h.RequestID, "参数 $3 有误, err=", err.Error())
-		rest.ToFailedJSON(w, h, common.ERR0006, common.GetInvalidParmErr(h))
+		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
 
 	// query
-	${4:queryStr} := r.FormValue("${5:queryStr}")
-	${6:queryInt}, err := strconv.ParseInt(r.FormValue("${7:queryInt}"), 10, 64)
-	if err != nil {
-		logger.Warn(h.RequestID, "参数 $6 有误, err=", err.Error())
-		rest.ToFailedJSON(w, h, common.ERR0006, common.GetInvalidParmErr(h))
+	var ${4:req} = &${5:CityActivityReq}{}
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode($4, r.URL.Query()); err != nil {
+		logger.Errorf(h.RequestID, err)
+		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
 
 	// header
 	// language := h.Lang
 
-	if resp, err := ${8:Name}(ctx, h, ${9:params}); err != nil {
-		logger.Warn(h.RequestID, "${10:msg} 出错, err=", err.Error())
-		rest.ToFailedJSON(w, h, comm.ERR0001, "Failed to $10")
+	if resp, err := $1(ctx, h, ${6:params}); err != nil {
+		logger.Warn(h.RequestID, "${7:msg} 出错, err=", err.Error())
+		rest.ToFailedJSON(w, h, comm.ERR0001, "Failed to $7")
 		return
 	} else {
 		rest.ToJSON(w, h, resp)
 	}
+}
+// $8
+func $1(ctx context.Context, h *comm.HandlerInfo, ${10:params}) (${9:returnType}, error) {
+	sp, ctx := opentracing.StartSpanFromContext(ctx, "$1")
+	defer sp.Finish()
+
+	var (
+		${11:resp} $9
+		err error
+	)
+
+	return $11, err
 }
 endsnippet
 
@@ -138,6 +151,14 @@ endsnippet
 
 snippet json "JSON field"
 \`json:"${1:displayName}"\`
+endsnippet
+
+snippet jsonomi "JSON omitempty"
+omitempty
+endsnippet
+
+snippet schema "schema field"
+\`schema:"${1:displayName}"\`
 endsnippet
 
 # vim:ft=snippets:
@@ -169,16 +190,13 @@ snippet cc "redisGetSetV3" b
 			if response, err = ${2:funbyDB}(ctx, ${3:params}); err != nil {
 				return err
 			}
-
 			// save to cache
 			if err = redisdb.Set(cacheKey, response, redisdb${7:.DefaultExpiresTime}); err != nil {
 				logger.Errorf("%s key:%s err:%s", utils.RequestIDFromContext(ctx), cacheKey, err)
 			}
 		}
-
 		return nil
 	}
-
 	// 加锁更新redis缓存，避免缓存失效对mysql造成冲击
 	// 	libsrdb "klook.libs/db/redisdb"
 	return response, libsrdb.NewRedislock(redisdb.CacheDB, redisdb.LockExpireTime, redisdb.LockTries, redisdb.LockDelayTime).GetSetV3(cacheKey, f)
@@ -213,7 +231,7 @@ endsnippet
 # RealLang
 snippet lang "language"
 language ${1::}= prolocale.RealLang(${2:h.Lang})
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
 
 # sqlx
@@ -223,7 +241,7 @@ if err != nil {
 	return ${2:err}
 }
 defer tx.Rollback()
-${VISUAL}
+${0:${VISUAL}}
 if err := ${3:smsdb.InsertUserFraud}(${4:ctx}, ${5:tx}, ${6:userFraud}); err != nil {
 	return $2
 }
@@ -234,24 +252,37 @@ endsnippet
 snippet spt "opentracing"
 sp, ctx := opentracing.StartSpanFromContext(ctx, "${1:QueryEmailAndIP}")
 defer sp.Finish()
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
 
 # post body
 snippet postbody "postunmasrshal"
-req := ${1:smsConfirmRequest}{}
-if err := utils.ParseBodyAndUnmarshal(r, &${2:req}); err != nil {
+${1:req} := ${2:smsConfirmRequest}{}
+if err := utils.ParseBodyAndUnmarshal(r, &$1); err != nil {
 	logger.Error(${3:h}.RequestID, " 解析出错, err:", err.Error())
 	rest.ToFailedJSON(w, $3, comm.ERR0006, ${5:fmt.Sprintf("[%s] %s", $3.RequestID, "${4:parameters err}")})
 	return
 }
-${VISUAL}
+${0:${VISUAL}}
+endsnippet
+
+snippet getreq "get query request param"
+// query
+var ${1:req} = &${2:CityActivityReq}{}
+decoder := schema.NewDecoder()
+decoder.IgnoreUnknownKeys(true)
+if err := decoder.Decode($1, r.URL.Query()); err != nil {
+	logger.Errorf(${3:h}.RequestID, err)
+	rest.ToFailedJSON(w, h, comm.ERR0006, ${4:common.GetInvalidParmErr(h)})
+	return
+}
+${0:${VISUAL}}
 endsnippet
 
 # append
 snippet app "append"
 ${1:list} = append($1, ${2:item})
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
 
 # timeAdd
@@ -259,11 +290,19 @@ snippet timeadd "time.Add"
 // 一天后
 ${1:startTime} := time.Now()${2:.UTC().}AddDate(0, 0, ${5:1}).Format(${3:utils.TsFormat1})
 ${4:endTime} := time.Now().UTC().Format($3)
-${VISUAL}
+${0:${VISUAL}}
 // 北京时间 12小时前
 $1 := time.Now()$2Add(${6:8} * time.Hour).Add(${7:-12} * time.Hour).Format($3)
 // 北京时间, utc 8小时后
 $4 := time.Now()$2Add($6 * time.Hour).Format($3)
+endsnippet
+
+snippet timefmt "time.Parse"
+${0:${VISUAL}}
+var ${1:timeStrTo} string
+if ${2:tt}, err := time.Parse("${3:2006-01-02 15:04:05}", ${4:timeStrFrom}); err == nil {
+	$1 = $2.Format("${5:2006-01-02T15:04:05Z}")
+}
 endsnippet
 
 snippet sqlx "sqlx.In"
@@ -276,7 +315,7 @@ var ${2:data} = make([]*${3:Category}, 0)
 if err := ${4:productdb.ReadDB}.SelectContext(ctx, &$2, querySql, args...); err != nil {
 	return nil, err
 }
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
 
 snippet geturl ""
@@ -287,7 +326,7 @@ if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, $1); err != nil {
 	logger.Errorf("%s [${7:GetCityTravelTipsByDB}] ${8:get basic_info} err:%s", h.RequestID, ${9: }err.Error())
 	return ${10:nil, err}
 }
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
 
 snippet posturl ""
@@ -299,5 +338,47 @@ if err := ${7:apprest}.PostAndParseResult(ctx, h, queryURL, $8, &$2); err != nil
 	logger.Errorf("%s [${9:GetCityTravelTipsByDB}] ${10:get basic_info} err:%s", h.RequestID, ${11: }err.Error())
 	return ${12:nil, err}
 }
-${VISUAL}
+${0:${VISUAL}}
 endsnippet
+
+snippet mapkey "get map keys"
+${1:keys} := make([]${2:int}, 0, len(${3}))
+for k := range $3 {
+	$1 = append($1, k)
+}
+${0:${VISUAL}}
+endsnippet
+
+snippet mapval "get map vals"
+${1:values} := make([]${2:int}, 0, len(${3}))
+for _, v := range $3 {
+	$1 = append($1, v)
+}
+${0:${VISUAL}}
+endsnippet
+
+snippet errlog "报错log"
+logger.Errorf("%s [${1:GetCityTravelTipsByDB}] ${2:get basic_info} err:%s", h.RequestID, err.Error())
+${0:${VISUAL}}
+endsnippet
+
+snippet preq "解析req"
+var ${1:req} = &${2:CityActivityReq}{}
+decoder := schema.NewDecoder()
+decoder.IgnoreUnknownKeys(true)
+if err := decoder.Decode($1, r.URL.Query()); err != nil {
+	logger.Errorf(h.RequestID, err)
+	rest.ToFailedJSON(w, h, comm.ERR0006, err.Error())
+	return
+}
+${0:${VISUAL}}
+endsnippet
+
+snippet proxy "转发 url"
+${1:dstUrl} := fmt.Sprintf("%s${2:/v1/prodbasesrv/cities/%s/publish}", conf.Conf.ProdBaseHost)
+$1 = strings.Replace($1, ${4:"path_or_query"}, ${5:var}, 1)
+${0:${VISUAL}}
+// 基础服务 prorest, 三端共用服 apprest
+${3:prorest}.Proxy(${6:w}, ${7:r}, $1)
+endsnippet
+
