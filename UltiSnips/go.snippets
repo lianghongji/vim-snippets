@@ -309,7 +309,7 @@ snippet urlget ""
 var ${1:data} = ${2:make([]*CityNews, 0)}
 queryURL := fmt.Sprintf("%s${3:/v1/prodbasesrv/city/%d/basic_info}", ${4:conf.Conf.ProdBaseHost} ${5:, cityId})
 // 基础服务 prorest, 三端共用服 apprest
-if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, $1); err != nil {
+if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, &$1); err != nil {
 	logger.Errorf("%s [${7:GetCityTravelTipsByDB}] ${8:get basic_info} err:%s", h.RequestID, ${9: }err.Error())
 	return ${10:nil, err}
 }
@@ -318,7 +318,7 @@ endsnippet
 
 snippet urlpost ""
 ${1:var req nearbyRequest}
-var ${2:resp} ${3:prodbaseQueryResponse}
+var ${2:resp} = ${3:prodbaseQueryResponse}
 queryURL := fmt.Sprintf("%s${4:/v1/prodbasesrv/fnb/nearby}", ${4:conf.Conf.ProdBaseHost} ${6:, params})
 // 基础服务 prorest, 三端共用服 apprest
 if err := ${7:apprest}.PostAndParseResult(ctx, h, queryURL, ${8:req}, &$2); err != nil {
