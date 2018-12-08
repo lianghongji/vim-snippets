@@ -45,6 +45,12 @@ type ${1:Interface} interface {
 }
 endsnippet
 
+snippet inter "Interface declaration" b
+type ${1:Interface} interface {
+	${0:${VISUAL}}
+}
+endsnippet
+
 snippet if "If statement" b
 if ${1:condition}${1/(.+)/ /}{
 	${0:${VISUAL}}
@@ -88,8 +94,13 @@ endsnippet
 # error handling
 snippet err "Basic error handling" b
 if err != nil {
-	log.${1:Fatal}(err)
+	logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
 }
+endsnippet
+
+# error handling
+snippet errnew "new error"
+fmt.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
 endsnippet
 
 
@@ -143,7 +154,6 @@ endsnippet
 # append
 snippet app "append"
 ${1:list} = append($1, ${2:item})
-${0:${VISUAL}}
 endsnippet
 
 #################### 时间
@@ -174,9 +184,8 @@ map[${1:keytype}]${2:valtype}
 endsnippet
 
 # 判断是否有
-snippet mapok "check map key"
-if _, ${1:ok} := ${2:mapVar}[${3:idx}]; ${4:!}$1 {
-	${5:val} := $2[$3]
+snippet ifok "check map key"
+if ${5:val}, ${3:ok} := ${1:mapVar}[${2:idx}]; ${4:!}$3 {
 	${0:${VISUAL}}
 }
 endsnippet
@@ -186,7 +195,6 @@ ${1:keys} := make([]${2:int}, 0, len(${3}))
 for k := range $3 {
 	$1 = append($1, k)
 }
-${0:${VISUAL}}
 endsnippet
 
 snippet mapval "get map vals"
@@ -194,18 +202,31 @@ ${1:values} := make([]${2:int}, 0, len(${3}))
 for _, v := range $3 {
 	$1 = append($1, v)
 }
-${0:${VISUAL}}
 endsnippet
 
-snippet errlog "报错log"
-logger.Errorf("%s [${1:GetCityTravelTipsByDB}] ${2:get basic_info} err:%s", utils.RequestIDFromContext(ctx), err.Error())
-${0:${VISUAL}}
+########## log
+
+snippet logdbug "报错log"
+logger.Debugf("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName},${6:err.Error()})
+endsnippet
+
+snippet logwn "warnlog"
+logger.Warnf("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err.Error()})
+endsnippet
+
+snippet loginfo "infolog"
+logger.Infof("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err.Error()})
+endsnippet
+
+snippet logerr "报错log"
+logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
 endsnippet
 
 ################## functions
 # tracing
 snippet spt "opentracing"
-sp, ctx := opentracing.StartSpanFromContext(ctx, "${1:QueryEmailAndIP}")
+funcName := "${1:CityDetailRds.QueryCityDetailByCityIdAndLanguage}"
+sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
 defer sp.Finish()
 ${0:${VISUAL}}
 endsnippet
@@ -232,23 +253,36 @@ endsnippet
 snippet funck "Function ctx" b
 // $1 ${6:commit}
 func ${1:name}(ctx context.Context, h *comm.HandlerInfo, ${4:params} ${5:paramsType}) (${2:returnType}, error) {
-	sp, ctx := opentracing.StartSpanFromContext(ctx, "$1")
+	funcName := "$1"
+	sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
 	defer sp.Finish()
 
-	var (
-		${3:resp} $2
-		err error
-	)
+	var ${3:resp} $2
 
 	${0:${VISUAL}}
-	return $3, err
+	return $3, nil
+}
+endsnippet
+
+snippet funcclass "Function ctx" b
+// $3 ${8:commit}
+func (${1:c} ${2:*ClassType}) ${3:name}(ctx context.Context, h *comm.HandlerInfo, ${5:params} ${6:paramsType}) (${4:returnType}, error) {
+	funcName := "$3"
+	sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
+	defer sp.Finish()
+
+	var ${7:resp} $4
+
+	${0:${VISUAL}}
+	return $7, nil
 }
 endsnippet
 
 snippet funch "HTTP handler" b
 // Handle$1 ${8:commit}
 func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
-	sp := rest.GetRequestTraceSpan("Handle$1", r)
+	funcName := "Handle$1"
+	sp := rest.GetRequestTraceSpan(funcName, r)
 	defer sp.Finish()
 	ctx := opentracing.ContextWithSpan(r.Context(), sp)
 	r = r.WithContext(ctx)
@@ -258,7 +292,7 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	// path
 	${2:cityId}, err := strconv.ParseInt(vars["${3:city_id}"], 10, 64)
 	if err != nil {
-		logger.Warn(h.RequestID, "[Handle$1] 参数 $3 有误, err=", err.Error())
+		logger.Warnf("%s [%s] 参数 $3 有误, err:%s", h.RequestID, funcName, err.Error())
 		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
@@ -268,7 +302,7 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	if err := decoder.Decode($4, r.URL.Query()); err != nil {
-		logger.Error(h.RequestID,"[Handle$1] err:", err)
+		logger.Warnf("%s [%s] 参数有误, err:%s", h.RequestID, funcName, err.Error())
 		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
@@ -277,7 +311,7 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	// language := h.Lang
 
 	if resp, err := $1(ctx, h, ${6:params}); err != nil {
-		logger.Error(h.RequestID, "[Handle$1] ${7:msg} 出错, err=", err.Error())
+		logger.Errorf("%s [%s]  ${7:msg} 出错, err:%s", h.RequestID, funcName, err.Error())
 		rest.ToFailedJSON(w, h, comm.ERR0001, "Failed to $7")
 		return
 	} else {
@@ -286,15 +320,13 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 }
 // $1 $8
 func $1(ctx context.Context, h *comm.HandlerInfo, ${10:params}) (${9:returnType}, error) {
-	sp, ctx := opentracing.StartSpanFromContext(ctx, "$1")
+	funcName := "$1"
+	sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
 	defer sp.Finish()
 
-	var (
-		${11:resp} $9
-		err error
-	)
+	var ${11:resp} $9
 
-	return $11, err
+	return $11, nil
 }
 endsnippet
 
@@ -305,7 +337,7 @@ return
 endsnippet
 
 #################### url 请求与转发
-snippet urlget ""
+snippet urlget "URL Get 调用"
 var ${1:data} = ${2:make([]*CityNews, 0)}
 queryURL := fmt.Sprintf("%s${3:/v1/prodbasesrv/city/%d/basic_info}", ${4:conf.Conf.ProdBaseHost} ${5:, cityId})
 // 基础服务 prorest, 三端共用服 apprest
@@ -316,7 +348,7 @@ if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, &$1); err != nil {
 ${0:${VISUAL}}
 endsnippet
 
-snippet urlpost ""
+snippet urlpost "URL Post 调用"
 ${1:var req nearbyRequest}
 var ${2:resp} = ${3:prodbaseQueryResponse}
 queryURL := fmt.Sprintf("%s${4:/v1/prodbasesrv/fnb/nearby}", ${4:conf.Conf.ProdBaseHost} ${6:, params})
@@ -366,10 +398,14 @@ querySql, args, err := sqlx.In(${5:query}, ${1:lang, actIDs})
 if err != nil {
 	return nil, err
 }
+logger.Debugf("%s [${6:CityDetailRds.FetchList}] querySql:%s, args:%v", ${7:utils.RequestIDFromContext(ctx)} ${8:}, querySql, args)
 var ${2:data} = make([]*${3:Category}, 0)
-// productdb.ReadDB, projectkdb.LibsMyDB.GetSqlxDB()
-if err := ${4:productdb.ReadDB}.SelectContext(ctx, &$2, querySql, args...); err != nil {
+// productdb.ReadDB, projectkdb.LibsMyDB.GetSqlxDB(), rds.LibsMyDB.GetSqlxDB()
+if err := ${4:rds.LibsMyDB.GetSqlxDB()}.SelectContext(ctx, &$2, querySql, args...); err != nil {
 	return nil, err
+}
+if ${9:len(data) == 0} ${10:||} ${11:data == nil}{
+	return nil, errors.New(fmt.Sprintf("%s [$6] no data", $7 $8))
 }
 ${0:${VISUAL}}
 endsnippet
@@ -389,8 +425,16 @@ return ${7:tx.Commit()}
 endsnippet
 
 ############## 增删改查
+## 检查db
+snippet dbck "db check"
+if rds.${1:LibsMyDB} == nil {
+	return nil, errors.New(fmt.Sprintf("%s [${2:CityDetailRds.Fetch}] ${3:db} is nil", ${4:utils.RequestIDFromContext(ctx)} ${5:}))
+}
+endsnippet
+
+
 ## 插入
-snippet dbins "insert"
+snippet dbinsf "insert func"
 // Insert$1 ${3: }
 func Insert${1:I18nHashMd5}(ctx context.Context, tx *sqlx.Tx, ctg *${2:I18nHashMd5}) (int64, error) {
 	insertSql := \`
@@ -410,9 +454,32 @@ func Insert${1:I18nHashMd5}(ctx context.Context, tx *sqlx.Tx, ctg *${2:I18nHashM
 	return id, nil
 }
 endsnippet
+## 插入
+snippet dbins "insert"
+id, err := ${3:prodbcomm}.NamedExecInsert(ctx, tx, ${1:insertSql}, ${2:data})
+if err != nil {
+	return -1, err
+}
+$2.Id = id
+endsnippet
+## 插入
+snippet dbinsu "insert or update"
+INSERT INTO ${1:city_detail} (
+	${2:city_id},
+	${3:language},
+	${4:name}
+) VALUES (
+	:$2,
+	:$3,
+	:$4,
+) ON DUPLICATE KEY UPDATE
+	$4 = :$4
+;
+endsnippet
+
 
 ## 更新
-snippet dbupd "update"
+snippet dbupdf "update func"
 // Update$1 ${3: }
 func Update${1:I18nHashMd5}(ctx context.Context, tx *sqlx.Tx, ctg *${2:I18nHashMd5}) error {
 	updateSql := \`
@@ -427,9 +494,14 @@ func Update${1:I18nHashMd5}(ctx context.Context, tx *sqlx.Tx, ctg *${2:I18nHashM
 	return prodbcomm.NamedExecUpdate(ctx, tx, updateSql, ctg)
 }
 endsnippet
+## 更新
+snippet dbupd "update"
+${3:prodbcomm}.NamedExecUpdate(ctx, tx, ${1:updateSql}, ${2:data})
+endsnippet
+
 
 ## 查找
-snippet dbsel "select"
+snippet dbself "select func"
 // Get$1 ${6: }
 func Get${1:I18nHashMd5ByMd5}(ctx context.Context, ${2:hashMd5s} []${3:string}) ([]*${4:I18nHashMd5}, error) {
 	query := \`
@@ -446,4 +518,92 @@ func Get${1:I18nHashMd5ByMd5}(ctx context.Context, ${2:hashMd5s} []${3:string}) 
 	err := prodbcomm.Select(ctx, ${5:productdb}.LibsMyDB.GetSqlxDB(), &ctgs, []string{}, query, $2)
 	return ctgs, err
 }
+endsnippet
+## 查找
+snippet dbsel "select"
+${2:data} := make([]${1:*int64}, 0)
+// 这里需要为：*sqlx.DB 类型的db, productdb 为 productdb.LibsMyDB.GetSqlxDB(), projectkdb 为 projectkdb.LibsMyDB.GetSqlxDB()
+if err := prodbcomm.Select(ctx, ${5:productdb}.LibsMyDB.GetSqlxDB(), &$2, []string{}, query, ${3:args}); err != nil{
+	return ${4:nil, err}
+}
+endsnippet
+
+
+## datasrv/apis import
+snippet dbapis
+dbapis "klook.com/datasrv/apis"
+endsnippet
+
+## 切割list分批处理
+snippet splitls "splitls"
+${1:reviewInfos} := make(${2:[]*review.DBReviewIdInfo, 0})
+${3:activityIds} := make([]${4:int64}, 0)
+${5:length} := len(${6:activityIdsList})
+// 根据 $3 获取 $1
+for idx, id := range $6 {
+	$3 = append($3, id)
+	nextIdx := idx + 1
+	if nextIdx%${7:common.MaxCardListLen} == 0 || nextIdx >= length {
+		slicesItems, err := ${8:reviews.GetReviewIDListByActIDList}(ctx ${9:, } $3 ${10:, language, page, limit})
+		if err != nil {
+			logger.Warnf("%s [%s] ${10:err:%s}", ${11:requestID}, ${12:funcName} ${13:, err.Error()})
+			continue
+			// return nil, err
+		}
+		$1 = append($1, slicesItems...)
+
+		$3 = make([]$4, 0)
+	}
+}
+endsnippet
+
+## slicesIds
+## 切割list分批处理
+snippet slicesls "切割list分批处理"
+// common.UniqueInt64Slice(&$2)
+${1:length} := len(${2:activityIdsList})
+// 根据 $2 获取 $3
+${3:reviewInfos} := make([]${4:*review.DBReviewIdInfo}, 0)
+for ${15:idx} := 0; $15 < $1; {
+	${5:nextIdx} := $15 + ${6:common.MaxCardListLen}
+	if $5 > $1{
+		$5 = $1
+	}
+	${7:activityIds}:= $2[$15:$5]
+	${8:slicesItems}, err := ${9:reviews.GetReviewIDListByActIDList}(ctx, $7, ${10:language, page, limit})
+	if err != nil {
+		logger.Warnf("%s [%s] ${11:err:%s}", ${12:requestID}, ${13:funcName} ${14:, err.Error()})
+		continue
+	}
+	$3 = append($3, $8...)
+	$15 = $5
+}
+endsnippet
+
+
+# test function
+snippet testf "func Test_XYZ(t *testing.T) { ... }"
+
+func Test_$1(t *testing.T) {
+	funcName := "Test_$1"
+	logger.MockLogger(t)
+	db.MockDB(t, "${2:../../service.conf}")
+	rds.MockDBProjctKDB(t)
+	${3:ctx := context.Background()}
+	${4:lang := locale.EN_US}
+	${0:${VISUAL}}
+	resp, ${5:total,} err := ${7: } ${1:GetActivityCardList}${6:(param)}
+	if err != nil {
+		t.Errorf("[%s] err:%s", funcName, err)
+	}
+
+	if err := rds.WriteTestOutToFile(resp, funcName, "", true); err != nil {
+		t.Errorf("[%s] WriteTestOutToFil err:%s", funcName, err)
+	}
+	t.Logf("[%s] Pass", funcName)
+}
+endsnippet
+
+snippet sortint "SortInt64s"
+${1:procomm}.SortInt64s(${2:cityIds})
 endsnippet
