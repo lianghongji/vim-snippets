@@ -94,13 +94,13 @@ endsnippet
 # error handling
 snippet err "Basic error handling" b
 if err != nil {
-	logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
+	logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%v", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err)
 }
 endsnippet
 
 # error handling
 snippet errnew "new error"
-fmt.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
+fmt.Errorf("%s [${1:%s}] ${2:get basic_info} err:%v", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err)
 endsnippet
 
 
@@ -143,6 +143,11 @@ endsnippet
 # Fmt Println debug
 snippet fsn "fmt.Sprintln(...)"
 fmt.Sprintln("${1:${VISUAL}}")
+endsnippet
+
+# Fmt Println debug
+snippet fmtmp "fmt.Printf(...)"
+fmt.Printf("############## $1:%#v \n", ${1:v})
 endsnippet
 
 # RealLang
@@ -204,30 +209,52 @@ for _, v := range $3 {
 }
 endsnippet
 
+snippet fori "for index"
+for ${2:i}, _ := range ${1:slice} {
+	${3:v} := $1[$2]
+	${0:${VISUAL}}
+}
+endsnippet
+
 ########## log
 
-snippet logdbug "报错log"
-logger.Debugf("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName},${6:err.Error()})
+snippet logbug "debug log"
+logger.Debugf("%s [${1:%s}] ${2:get basic_info} ${5:err:%v}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName},${6:err})
 endsnippet
 
 snippet logwn "warnlog"
-logger.Warnf("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err.Error()})
+logger.Warnf("%s [${1:%s}] ${2:get basic_info} ${5:err:%v}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err})
 endsnippet
 
 snippet loginfo "infolog"
-logger.Infof("%s [${1:%s}] ${2:get basic_info} ${5:err:%s}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err.Error()})
+logger.Infof("%s [${1:%s}] ${2:get basic_info} ${5:err:%v}", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, ${6:err})
 endsnippet
 
 snippet logerr "报错log"
-logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%s", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err.Error())
+logger.Errorf("%s [${1:%s}] ${2:get basic_info} err:%v", ${3:utils.RequestIDFromContext(ctx)}, ${4:funcName}, err)
+endsnippet
+
+snippet logtmp "调试 log"
+logger.Debugf("[${3:##########}] $1:${2:%#v}", ${1:var})
 endsnippet
 
 ################## functions
 # tracing
 snippet spt "opentracing"
-funcName := "${1:CityDetailRds.QueryCityDetailByCityIdAndLanguage}"
+funcName := "${1:CurFuncName()}"
 sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
 defer sp.Finish()
+${0:${VISUAL}}
+endsnippet
+
+# tracing
+snippet spth "opentracing handle func"
+funcName := "${1:CurFuncName()}"
+sp := rest.GetRequestTraceSpan(funcName, r)
+defer sp.Finish()
+ctx := opentracing.ContextWithSpan(r.Context(), sp)
+r = r.WithContext(ctx)
+h := rest.GetCtxParams(r)
 ${0:${VISUAL}}
 endsnippet
 
@@ -279,9 +306,9 @@ func (${1:c} ${2:*ClassType}) ${3:name}(ctx context.Context, h *comm.HandlerInfo
 endsnippet
 
 snippet funch "HTTP handler" b
-// Handle$1 ${8:commit}
+// Handle$1 ${10:commit}
 func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
-	funcName := "Handle$1"
+	funcName := "$1"
 	sp := rest.GetRequestTraceSpan(funcName, r)
 	defer sp.Finish()
 	ctx := opentracing.ContextWithSpan(r.Context(), sp)
@@ -292,7 +319,7 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	// path
 	${2:cityId}, err := strconv.ParseInt(vars["${3:city_id}"], 10, 64)
 	if err != nil {
-		logger.Warnf("%s [%s] 参数 $3 有误, err:%s", h.RequestID, funcName, err.Error())
+		logger.Warnf("%s [%s] 参数 $3 有误, err:%v", h.RequestID, funcName, err)
 		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
@@ -302,7 +329,7 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	if err := decoder.Decode($4, r.URL.Query()); err != nil {
-		logger.Warnf("%s [%s] 参数有误, err:%s", h.RequestID, funcName, err.Error())
+		logger.Warnf("%s [%s] 参数有误, err:%v", h.RequestID, funcName, err)
 		rest.ToFailedJSON(w, h, comm.ERR0006, common.GetInvalidParmErr(h))
 		return
 	}
@@ -311,22 +338,22 @@ func Handle${1:Name}(w http.ResponseWriter, r *http.Request) {
 	// language := h.Lang
 
 	if resp, err := $1(ctx, h, ${6:params}); err != nil {
-		logger.Errorf("%s [%s]  ${7:msg} 出错, err:%s", h.RequestID, funcName, err.Error())
+		logger.Errorf("%s [%s]  ${7:msg} 出错, err:%v", h.RequestID, funcName, err)
 		rest.ToFailedJSON(w, h, comm.ERR0001, "Failed to $7")
 		return
 	} else {
 		rest.ToJSON(w, h, resp)
 	}
 }
-// $1 $8
-func $1(ctx context.Context, h *comm.HandlerInfo, ${10:params}) (${9:returnType}, error) {
+// $1 $10
+func $1(ctx context.Context, h *comm.HandlerInfo, ${12:params}) (${11:returnType}, error) {
 	funcName := "$1"
 	sp, ctx := opentracing.StartSpanFromContext(ctx, funcName)
 	defer sp.Finish()
 
-	var ${11:resp} $9
+	var ${13:resp} $9
 
-	return $11, nil
+	return $13, nil
 }
 endsnippet
 
@@ -336,13 +363,36 @@ rest.ToFailedJSON(w, h, comm.ERR0006, "parameters err")
 return
 endsnippet
 
+snippet paramid "解析整数 ID"
+${2:activityId}Param := r.FormValue("${1:activity_id}")
+$2, err := strconv.ParseInt($2Param, 10, 64)
+if err != nil || $2 <=0 {
+	logger.Errorf("%s [%s] 参数错误, $1:%v, err:%v", h.RequestID, funcName, $2Param, err)
+	rest.ToFailedJSON(w, h, comm.ERR0006, fmt.Sprintf("param err, $1:%v", $2Param))
+	return
+}
+endsnippet
+
+snippet paramids "解析整数 ID 列表"
+${2:activityIds}Param := r.FormValue("${1:activity_id_list}")
+$2 := make([]int64, 0)
+for _, v := range strings.Split($2Param, ",") {
+	id, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || id <=0 {
+		logger.Errorf("%s [%s] 参数错误, $1:%v, err:%v", h.RequestID, funcName, $2Param, err)
+		rest.ToFailedJSON(w, h, comm.ERR0006, fmt.Sprintf("param err, $1:%v", $2Param))
+		return
+	}
+}
+endsnippet
+
 #################### url 请求与转发
 snippet urlget "URL Get 调用"
 var ${1:data} = ${2:make([]*CityNews, 0)}
 queryURL := fmt.Sprintf("%s${3:/v1/prodbasesrv/city/%d/basic_info}", ${4:conf.Conf.ProdBaseHost} ${5:, cityId})
 // 基础服务 prorest, 三端共用服 apprest
 if err := ${6:apprest}.GetAndParseResult(ctx, h, queryURL, &$1); err != nil {
-	logger.Errorf("%s [${7:GetCityTravelTipsByDB}] ${8:get basic_info} err:%s", h.RequestID, ${9: }err.Error())
+	logger.Errorf("%s [${7:GetCityTravelTipsByDB}] ${8:get basic_info} err:%v", h.RequestID, ${9: }err)
 	return ${10:nil, err}
 }
 ${0:${VISUAL}}
@@ -354,7 +404,7 @@ var ${2:resp} = ${3:prodbaseQueryResponse}
 queryURL := fmt.Sprintf("%s${4:/v1/prodbasesrv/fnb/nearby}", ${4:conf.Conf.ProdBaseHost} ${6:, params})
 // 基础服务 prorest, 三端共用服 apprest
 if err := ${7:apprest}.PostAndParseResult(ctx, h, queryURL, ${8:req}, &$2); err != nil {
-	logger.Errorf("%s [${9:GetCityTravelTipsByDB}] ${10:get basic_info} err:%s", utils.RequestIDFromContext(ctx), ${11: }err.Error())
+	logger.Errorf("%s [${9:GetCityTravelTipsByDB}] ${10:get basic_info} err:%v", utils.RequestIDFromContext(ctx), ${11: }err)
 	return ${12:nil, err}
 }
 ${0:${VISUAL}}
@@ -372,7 +422,7 @@ endsnippet
 snippet reqpost "postunmasrshal"
 ${1:req} := ${2:smsConfirmRequest}{}
 if err := utils.ParseBodyAndUnmarshal(r, &$1); err != nil {
-	logger.Error(${3:h}.RequestID, " 解析出错, err:", err.Error())
+	logger.Error(${3:h}.RequestID, " 解析出错, err:", err)
 	rest.ToFailedJSON(w, $3, comm.ERR0006, ${5:fmt.Sprintf("[%s] %s", $3.RequestID, "${4:parameters err}")})
 	return
 }
@@ -528,6 +578,23 @@ if err := prodbcomm.Select(ctx, ${5:productdb}.LibsMyDB.GetSqlxDB(), &$2, []stri
 }
 endsnippet
 
+## 查找
+snippet dbqu "query"
+${2:data} := make([]${1:*int64}, 0)
+// 这里需要为：*sqlx.DB 类型的db, productdb 为 productdb.LibsMyDB.GetSqlxDB(), projectkdb 为 projectkdb.LibsMyDB.GetSqlxDB()
+if err := prodbcomm.Query(ctx, ${5:productdb}.LibsMyDB.GetSqlxDB(), &$2, query, ${3:args}); err != nil{
+	return ${4:nil, err}
+}
+endsnippet
+
+## 查找
+snippet dbscan "db scan vars"
+var ${1:dest} ${2:int64}
+${6:dbRow} := ${5:db.RWKdb}.QueryRow(${3:query}, ${4:arg})
+if err := $6.Scan(&$1); err != nil {
+	return ${7:nil, err}
+}
+endsnippet
 
 ## datasrv/apis import
 snippet dbapis
@@ -543,10 +610,10 @@ ${5:length} := len(${6:activityIdsList})
 for idx, id := range $6 {
 	$3 = append($3, id)
 	nextIdx := idx + 1
-	if nextIdx%${7:common.MaxCardListLen} == 0 || nextIdx >= length {
+	if nextIdx%${7:prodbcomm.MaxSqlInIdCount} == 0 || nextIdx >= length {
 		slicesItems, err := ${8:reviews.GetReviewIDListByActIDList}(ctx ${9:, } $3 ${10:, language, page, limit})
 		if err != nil {
-			logger.Warnf("%s [%s] ${10:err:%s}", ${11:requestID}, ${12:funcName} ${13:, err.Error()})
+			logger.Warnf("%s [%s] ${10:err:%v}", ${11:requestID}, ${12:funcName} ${13:, err})
 			continue
 			// return nil, err
 		}
@@ -560,23 +627,23 @@ endsnippet
 ## slicesIds
 ## 切割list分批处理
 snippet slicesls "切割list分批处理"
-// common.UniqueInt64Slice(&$2)
+// procomm.UniqueInt64Slice(&$2)
 ${1:length} := len(${2:activityIdsList})
 // 根据 $2 获取 $3
 ${3:reviewInfos} := make([]${4:*review.DBReviewIdInfo}, 0)
-for ${15:idx} := 0; $15 < $1; {
-	${5:nextIdx} := $15 + ${6:common.MaxCardListLen}
+var ${5:nextIdx} int
+for ${15:idx} := 0; $15 < $1; $15 = $5 {
+	$5 = $15 + ${6:prodbcomm.MaxSqlInIdCount}
 	if $5 > $1{
 		$5 = $1
 	}
 	${7:activityIds}:= $2[$15:$5]
 	${8:slicesItems}, err := ${9:reviews.GetReviewIDListByActIDList}(ctx, $7, ${10:language, page, limit})
 	if err != nil {
-		logger.Warnf("%s [%s] ${11:err:%s}", ${12:requestID}, ${13:funcName} ${14:, err.Error()})
+		logger.Warnf("%s [%s] ${11:err:%v}", ${12:requestID}, ${13:funcName} ${14:, err})
 		continue
 	}
 	$3 = append($3, $8...)
-	$15 = $5
 }
 endsnippet
 
@@ -585,25 +652,144 @@ endsnippet
 snippet testf "func Test_XYZ(t *testing.T) { ... }"
 
 func Test_$1(t *testing.T) {
-	funcName := "Test_$1"
+	funcName := "$1"
 	logger.MockLogger(t)
-	db.MockDB(t, "${2:../../service.conf}")
-	rds.MockDBProjctKDB(t)
-	${3:ctx := context.Background()}
-	${4:lang := locale.EN_US}
+	// projectkdb , productdb
+	${2:db}.MockDB(t, "${3:../../service.conf}")
+	// rds.MockDBProjctKDB 或 rds.MockDBProductDB
+	// rds.${4:MockDBProjctKDB}(t)
+	${5:ctx := context.Background()}
+	${6:lang := locale.EN_US}
 	${0:${VISUAL}}
-	resp, ${5:total,} err := ${7: } ${1:GetActivityCardList}${6:(param)}
+	resp, ${7: } err := ${9: } ${1:GetActivityCardList}${8:(param)}
 	if err != nil {
 		t.Errorf("[%s] err:%s", funcName, err)
 	}
 
-	if err := rds.WriteTestOutToFile(resp, funcName, "", true); err != nil {
+	${10:if err := rds.WriteTestOutToFile(resp, funcName, "", true); err != nil {
 		t.Errorf("[%s] WriteTestOutToFil err:%s", funcName, err)
-	}
+	}}
+
+	${11:logger.Debugf("[##########] resp:%#v", resp)}
 	t.Logf("[%s] Pass", funcName)
 }
 endsnippet
 
+# benchmark function
+snippet benchf "func Benchmark_XYZ(t *testing.T) { ... }"
+func Benchmark_$1(b *testing.B) {
+	${2:redisdb}.MockRedisForBench(b, "${3:../../service.conf}")
+	// projectkdb , productdb
+	${4:db}.MockDB(t, "${3:../../service.conf}")
+	for i := 0; i < b.N; i++ {
+		${1:GetYSimHome}(context.Background(), h, userId)
+	}
+}
+endsnippet
+
+
 snippet sortint "SortInt64s"
 ${1:procomm}.SortInt64s(${2:cityIds})
+endsnippet
+
+snippet uniqint "UniqueInt64Slice"
+${1:procomm}.UniqueInt64Slice(&${2:slice})
+endsnippet
+
+snippet uniqstr "UniqueStringSlice"
+${1:procomm}.UniqueStringSlice(&${2:slice})
+endsnippet
+
+snippet doc "文档"
+/**************************************************************
+Func: ${1:Func}
+Req : ${2:req}
+Resp: ${3:resp}
+Desc: ${0:${VISUAL}}
+**************************************************************/
+endsnippet
+
+snippet sortst "sort struct"
+type ${2:ByPriority2} []*${1:ContentThemesStructV2}
+
+func (a $2) Len() int           { return len(a) }
+func (a $2) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a $2) Less(i, j int) bool { return a[i]${3:.Priority} < a[j]$3}
+endsnippet
+
+
+############ go-swagger ##############
+snippet swagget "go-swagger-get"
+////////////////////////////////////////////////////////////////////////////////////
+// start api doc defination GET
+////////////////////////////////////////////////////////////////////////////////////
+// swagger:parameters ${1:queryOpertionId}
+type $1Request struct {
+	// ${8:语言}
+	// Required: true
+	// in: ${7:query}
+	${5:Language} ${6:string}
+	// ${12:vars, 逗号分隔，总数不能大于 100}
+	// Required: true
+	// in: ${11:path}
+	${9:PathVar} ${10:string}
+}
+
+// swagger:response $1Response
+type $1ResponseWrapper struct {
+	// in: body
+	Body struct {
+		apis.KlAPIResponse
+		Result ${13:[]int64} `json:"result"`
+	}
+}
+${0:${VISUAL}}
+// swagger:route GET ${4:/servicesrv/ping/{path_var}} ${2:tag} $1
+//
+// ${3:route desc}.
+//
+//
+//		Responses:
+//		  200: $1Response
+endsnippet
+
+snippet swagpost "go-swagger-post"
+////////////////////////////////////////////////////////////////////////////////////
+// start api doc defination POST
+////////////////////////////////////////////////////////////////////////////////////
+type $5 struct{
+${0:${VISUAL}}
+}
+
+// swagger:parameters ${1:postOpertionId}
+type $1Request struct {
+	// in: body
+	Body ${5:bodyStruct}
+}
+
+// swagger:response $1Response
+type $1ResponseWrapper struct {
+	// in: body
+	Body struct {
+		apis.KlAPIResponse
+		Result ${6:[]int64} `json:"result"`
+	}
+}
+
+// swagger:route POST ${4:/servicesrv/ping/{path_var}} ${2:tag} $1
+//
+// ${3:route desc}.
+//
+//
+//		Responses:
+//		  200: $1Response
+endsnippet
+
+############ TODO ##############
+snippet todo "TODO 注释"
+// TODO: ${1:description}
+endsnippet
+
+snippet depr "废弃注释"
+// Deprecated ${1:已废弃, 不建议使用此函数/变量，请使用替代函数/变量}
 endsnippet
