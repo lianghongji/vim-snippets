@@ -85,6 +85,19 @@ snippet jsonomi "JSON omitempty"
 omitempty
 endsnippet
 
+# 美化 字符串json
+snippet jsonpretty "JSON pretty"
+var ${1:out} bytes.Buffer
+err := json.Indent(&$1, []byte(${2:resp}), "", "\t")
+if err != nil {
+	logger.Debugf("[##########] err:%#v", err)
+}else{
+	${3:prettyJson} := $1.String()
+	logger.Debugf("[##########] $2:%s\n", $3)
+}
+endsnippet
+
+
 snippet schema "schema field"
 \`schema:"${1:displayName}"\`
 endsnippet
@@ -179,6 +192,16 @@ ${0:${VISUAL}}
 var ${1:timeStrTo} string
 if ${2:tt}, err := time.Parse("${3:2006-01-02 15:04:05}", ${4:timeStrFrom}); err == nil {
 	$1 = $2.Format("${5:2006-01-02T15:04:05Z}")
+}
+endsnippet
+
+# 检查时间格式
+snippet timeck "time check 格式"
+// const TsFormat1 = "2006-01-02 15:04:05"
+if _, err := utils.ParseTimeTsFormat1(${1:req.StartTime}); err != nil {
+	logger.Errorf("%s [%s] 时间格式解析出错, ${2:start_time}:%#v, err:", h.RequestID, funcName, $1, err)
+	rest.ToFailedJSON(w, h, comm.ERR0006, fmt.Sprintf("[%s] %s", h.RequestID, "$2 parameters err"))
+	return
 }
 endsnippet
 
@@ -735,7 +758,7 @@ type $1Request struct {
 	${9:PathVar} ${10:string}
 }
 
-// swagger:response $1Response
+// swagger:response
 type $1ResponseWrapper struct {
 	// in: body
 	Body struct {
@@ -767,7 +790,7 @@ type $1Request struct {
 	Body ${5:bodyStruct}
 }
 
-// swagger:response $1Response
+// swagger:response
 type $1ResponseWrapper struct {
 	// in: body
 	Body struct {
@@ -792,4 +815,12 @@ endsnippet
 
 snippet depr "废弃注释"
 // Deprecated ${1:已废弃, 不建议使用此函数/变量，请使用替代函数/变量}
+endsnippet
+
+#################################
+snippet gorun "go 协程"
+var ctxDup = utils.ContextDup(ctx)
+go utils.HandlePanic(ctxDup, func() {
+	${1:funCall()}
+})()
 endsnippet
