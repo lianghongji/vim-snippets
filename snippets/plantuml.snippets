@@ -1,0 +1,99 @@
+snippet start
+	@startuml
+	/' !includeurl https://raw.githubusercontent.com/xuanye/plantuml-style-c4/master/core.puml '/
+	${0:${VISUAL}}
+	@enduml
+
+snippet Person "Add Person to C4 diagram"
+	Person(${1:personAlias}, "${2:Label}")
+
+
+snippet PersonDesc "Add Person with Description to C4 diagram"
+	Person(${1:personAlias}, "${2:Label}", "${3:Optional Description}")
+
+
+snippet PersonExt "Add External Person to C4 diagram"
+	Person_Ext(${1:alias}, "${2:label}")
+
+
+snippet PersonExtDesc "Add External Person with Description to C4 diagram"
+	Person_Ext(${1:alias}, "${2:label}", "${3:description}")
+
+snippet Container "Add Container to C4 diagram"
+	Container(${1:alias}, "${2:label}", "${3:technology}")
+
+snippet ContainerDesc "Add Container with Description to C4 diagram"
+	Container(${1:alias}, "${2:label}", "${3:technology}", "${4:description}")
+
+snippet ContainerBoundary "Add a Container Boundary to C4 diagram"
+	Container_Boundary(${1:alias}, "${2:label}"){
+	${0:${VISUAL}}
+	}
+
+snippet Component "Add Component to C4 diagram"
+	Component(${1:alias}, "${2:label}", "${3:technology}")
+
+
+snippet ComponentDesc "Add Component with Description to C4 diagram"
+	Component(${1:alias}, "${2:label}", "${3:technology}", "${4:description}")
+
+
+snippet System "Add System to C4 diagram"
+	System(${1:alias}, "${2:label}")
+
+
+snippet SystemDesc "Add System with Description to C4 diagram"
+	System(${1:alias}, "${2:label}", "${3:description}")
+
+
+snippet SystemExt "Add External System to C4 diagram"
+	System_Ext(${1:alias}, "${2:label}")
+
+
+snippet SystemExtDesc "Add External System with Description to C4 diagram"
+	System_Ext(${1:alias}, "${2:label}", "${3:description}")
+
+
+snippet SystemBoundary "Add a System Boundary to C4 diagram"
+	System_Boundary(${1:alias}, "${2:label}"){
+
+
+snippet EnterpriseBoundary "Add an Enterprise Boundary to C4 diagram"
+	Enterprise_Boundary(${1:alias}, "${2:label}"){
+	${0:${VISUAL}}
+	}
+
+
+snippet Rel "Add unidirectional Relationship to C4 diagram"
+	Rel(${1:from_alias}, ${2:to_alias}, "${3:label}")
+
+
+snippet Relationship "Add unidirectional Relationship to C4 diagram"
+	Rel(${1:from_alias}, ${2:to_alias}, "${3:label}")
+
+
+snippet RelTechn "Add unidirectional Relationship with Technology to C4 diagram"
+	Rel(${1:from_alias}, ${2:to_alias}, "${3:label}", "${4:technology}")
+
+
+snippet LayR "Add hidden layout line to put {to} to the right of {from}"
+	Lay_R(${1:from_alias}, ${2:to_alias})
+
+
+snippet LayL "Add hidden layout line to put {to} to the left of {from}"
+	Lay_L(${1:from_alias}, ${2:to_alias})
+
+
+snippet Boundary "Add a generic boundary to C4 diagram."
+	Boundary(${1:alias}, "${2:label}"){
+	${0:${VISUAL}}
+	}
+
+
+snippet BoundaryType "Add a generic boundary to C4 diagram."
+	Boundary(${1:alias}, "${2:label}", "${3:type}"){
+	${0:${VISUAL}}
+	}
+
+
+
