@@ -59,6 +59,12 @@ if ${1:condition}${1/(.+)/ /}{
 }
 endsnippet
 
+snippet ifok "If OK statement" b
+if _, ok := ${1:mapName}[${2:key}]; ok{
+	$3
+}
+endsnippet
+
 snippet switch "Switch statement" b
 switch ${1:expression}${1/(.+)/ /}{
 case$0
